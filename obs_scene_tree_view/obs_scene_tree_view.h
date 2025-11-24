@@ -4,7 +4,7 @@
 #include <map>
 
 #include <QAbstractItemDelegate>
-#include <QtWidgets/QDockWidget>
+#include <QtWidgets/QWidget>
 
 #include <util/util.hpp>
 
@@ -13,7 +13,7 @@
 #include "ui_scene_tree_view.h"
 
 class ObsSceneTreeView
-        : public QDockWidget
+        : public QWidget
 {
 		Q_OBJECT
 

@@ -5,6 +5,7 @@
 #include <QLineEdit>
 #include <QAction>
 #include <QtWidgets/QComboBox>
+#include <QtWidgets/QDockWidget>
 #include <QtWidgets/QListWidget>
 #include <QtWidgets/QMainWindow>
 #include <QtWidgets/QMenu>
@@ -70,6 +71,9 @@ MODULE_EXPORT const char *obs_module_name(void)
 	return obs_module_text("SceneTreeView");
 }
 
+#define QT_UTF8(str) QString::fromUtf8(str)
+#define QT_TO_UTF8(str) str.toUtf8().constData()
+
 MODULE_EXPORT bool obs_module_load(void)
 {
 	blog(LOG_INFO, "[%s] loaded version %s", obs_module_name(), PROJECT_VERSION);
@@ -80,32 +84,33 @@ MODULE_EXPORT bool obs_module_load(void)
 
 	QMainWindow *main_window = reinterpret_cast<QMainWindow*>(obs_frontend_get_main_window());
 	obs_frontend_push_ui_translation(obs_module_get_string);
-	ObsSceneTreeView *dock = new ObsSceneTreeView(main_window);
-	dock->setObjectName("obs_scene_tree_view");
-	{
-		const char *t = obs_module_text("SceneTreeView.Title");
-		QString title = QString::fromUtf8(t ? t : "");
-		if (title.isEmpty() || title == QLatin1String("SceneTreeView.Title"))
-			title = QStringLiteral("Scene Tree View");
-		dock->setWindowTitle(title);
-	}
-	// Register dock via add_dock_by_id to guarantee Docks menu entry, then detach our QDockWidget shell
-	bool added = false;
-	QWidget *contents = dock->widget();
-	if (contents) {
-		// Detach contents so OBS can reparent without layout warnings
-		dock->setWidget(nullptr);
-		obs_frontend_add_dock_by_id("obs_scene_tree_view",
-			obs_module_text("SceneTreeView.Title"), contents);
+
+	ObsSceneTreeView *view = new ObsSceneTreeView(main_window);
+	view->setObjectName("obs_scene_tree_view");
+
+	const char *t = obs_module_text("SceneTreeView.Title");
+	QString title = QString::fromUtf8(t ? t : "");
+	if (title.isEmpty() || title == QLatin1String("SceneTreeView.Title"))
+		title = QStringLiteral("Scene Tree View");
+
+	bool added = obs_frontend_add_dock_by_id("obs_scene_tree_view",
+		QT_TO_UTF8(title), view);
+
+	if (added) {
 		blog(LOG_INFO, "[%s] registered via add_dock_by_id", obs_module_name());
-		added = true;
+
+		// Configure dock features on the OBS-created QDockWidget wrapper
+		if (auto *dockWidget = qobject_cast<QDockWidget*>(view->parentWidget())) {
+			dockWidget->setAllowedAreas(Qt::AllDockWidgetAreas);
+			dockWidget->setFeatures(QDockWidget::DockWidgetClosable |
+			                        QDockWidget::DockWidgetMovable |
+			                        QDockWidget::DockWidgetFloatable);
+		}
 	} else {
-		// As a fallback, try custom_qdock path
-		added = obs_frontend_add_custom_qdock("obs_scene_tree_view", dock);
-		if (added)
-			blog(LOG_INFO, "[%s] registered via add_custom_qdock (fallback)", obs_module_name());
+		blog(LOG_ERROR, "[%s] failed to register dock via add_dock_by_id", obs_module_name());
 	}
-	g_stv_dock = dock;
+
+	g_stv_dock = view;
 	g_stv_added = added;
 	obs_frontend_pop_ui_translation();
 
@@ -115,12 +120,8 @@ MODULE_EXPORT bool obs_module_load(void)
 MODULE_EXPORT void obs_module_unload()
 {}
 
-#define QT_UTF8(str) QString::fromUtf8(str)
-#define QT_TO_UTF8(str) str.toUtf8().constData()
-
-
 ObsSceneTreeView::ObsSceneTreeView(QMainWindow *main_window)
-    : QDockWidget(dynamic_cast<QWidget*>(main_window)),
+    : QWidget(main_window),
       _add_scene_act(main_window->findChild<QAction*>("actionAddScene")),
       _remove_scene_act(main_window->findChild<QAction*>("actionRemoveScene")),
       _toggle_toolbars_scene_act(main_window->findChild<QAction*>("toggleListboxToolbars"))
@@ -139,12 +140,7 @@ ObsSceneTreeView::ObsSceneTreeView(QMainWindow *main_window)
 		this->_move_scene_down_act = main_window->findChild<QAction*>("actionSceneDown");
 
 	this->_stv_dock.setupUi(this);
-	// Ensure dock is initially docked (not floating) after UI has set properties
-	this->setAllowedAreas(Qt::AllDockWidgetAreas);
-	this->setFeatures(QDockWidget::DockWidgetClosable | QDockWidget::DockWidgetMovable | QDockWidget::DockWidgetFloatable);
-
-
-	this->setFloating(false);
+	// Docking behavior is now managed by OBS's QDockWidget wrapper.
 
 	// Defer applying theme classes; classes are applied in FINISHED_LOADING via setClasses().
 	// Disable actions until OBS finishes loading to avoid first-click race conditions
@@ -608,22 +604,17 @@ void ObsSceneTreeView::ObsFrontendEvent(enum obs_frontend_event event)
 	{
 		// Retry dock registration if it failed during module load (e.g., early lifecycle)
 		if (!g_stv_added && g_stv_dock) {
-			bool added = false;
-			// Prefer add_dock_by_id to ensure Docks menu entry
-			QWidget *contents = g_stv_dock->widget();
-			if (contents) {
-				g_stv_dock->setWidget(nullptr);
-				obs_frontend_add_dock_by_id("obs_scene_tree_view",
-					obs_module_text("SceneTreeView.Title"), contents);
-				blog(LOG_INFO, "[%s] retry add_dock_by_id invoked", obs_module_name());
-				added = true;
-			} else {
-				// Fallback: try custom_qdock
-				added = obs_frontend_add_custom_qdock("obs_scene_tree_view", g_stv_dock);
-				if (added)
-					blog(LOG_INFO, "[%s] add_custom_qdock retry succeeded", obs_module_name());
-			}
-			g_stv_added = added;
+			const char *t = obs_module_text("SceneTreeView.Title");
+			QString title = QString::fromUtf8(t ? t : "");
+			if (title.isEmpty() || title == QLatin1String("SceneTreeView.Title"))
+				title = QStringLiteral("Scene Tree View");
+
+			g_stv_added = obs_frontend_add_dock_by_id("obs_scene_tree_view",
+				QT_TO_UTF8(title), g_stv_dock);
+			if (g_stv_added)
+				blog(LOG_INFO, "[%s] retry add_dock_by_id succeeded", obs_module_name());
+			else
+				blog(LOG_ERROR, "[%s] retry add_dock_by_id failed", obs_module_name());
 		}
 
 		this->_scene_collection_name = obs_frontend_get_current_scene_collection();

@@ -53,4 +53,8 @@ $zipPath = Join-Path $OutDir 'obs-scene-tree-view-windows-x64.zip'
 if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
 Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $zipPath -Force
 
+# Generate SHA256 checksum alongside the ZIP (for release integrity verification)
+# Uses scripts/checksums.ps1 to emit "<hash>  <filename>" format
+& (Join-Path $PSScriptRoot 'checksums.ps1') -Path $zipPath
+
 Write-Host "Packaged: $zipPath"

@@ -43,6 +43,7 @@ Each ZIP is packaged with a system-level folder layout so you can unzip directly
   - OBS deps (Qt 6.8.3 pack): `C:\OBS-SDK\obs-studio-src\.deps\obs-deps-qt6-2025-08-23-x64`
 
 Notes:
+- These binaries require OBS Studio 32.0.1+ (built against libobs 32 and Qt 6.8.3). Older OBS releases are not ABI-compatible with this build.
 - Qt version must match the OBS runtime’s Qt exactly. For OBS 32.0.1, use Qt 6.8.3.
 - Mixing Qt versions (e.g., building against 6.9.x while running OBS with 6.8.3) will prevent the plugin from loading.
 

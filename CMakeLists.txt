@@ -12,7 +12,7 @@ set(LIB_CONFIG_NAME "${LIBRARY_NAME}Config")
 set(LIB_VERSION_NAME "${LIB_CONFIG_NAME}Version")
 
 cmake_minimum_required(VERSION 3.25)
-project("${PROJECT_NAME}" VERSION 0.1.5)
+project("${PROJECT_NAME}" VERSION 0.1.6)
 
 if(NOT DEFINED BUILD_IN_OBS)
 		set(BUILD_IN_OBS OFF)

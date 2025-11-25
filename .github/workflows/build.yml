@@ -1,0 +1,133 @@
+name: Build
+
+on:
+  push:
+    branches: [master, dev]
+  pull_request:
+    branches: [master]
+
+jobs:
+  windows:
+    name: Windows x64
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup MSVC
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Cache OBS Studio
+        id: cache-obs
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/obs-studio
+          key: obs-studio-32-windows
+
+      - name: Build Plugin
+        shell: pwsh
+        run: |
+          # Configure and build
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+          cmake --build build --config RelWithDebInfo
+
+      - name: Package Plugin
+        shell: pwsh
+        run: |
+          ./scripts/package-windows.ps1 -BuildDir build -OutDir dist
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: obs-scene-tree-view-windows-x64
+          path: |
+            dist/obs-scene-tree-view-windows-x64.zip
+            dist/obs-scene-tree-view-windows-x64.zip.sha256
+
+  linux:
+    name: Linux x86_64
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            ninja-build \
+            pkg-config \
+            qt6-base-dev \
+            libqt6widgets6
+
+      - name: Cache OBS Studio
+        id: cache-obs
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/obs-studio
+          key: obs-studio-32-linux
+
+      - name: Build Plugin
+        run: |
+          cmake -S . -B build -G Ninja
+          cmake --build build --config RelWithDebInfo
+
+      - name: Package Plugin
+        run: |
+          chmod +x ./scripts/package-linux.sh
+          ./scripts/package-linux.sh build dist
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: obs-scene-tree-view-linux-x86_64
+          path: |
+            dist/obs-scene-tree-view-linux-x86_64.zip
+            dist/obs-scene-tree-view-linux-x86_64.zip.sha256
+
+  macos:
+    name: macOS Universal
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Dependencies
+        run: |
+          brew install cmake ninja qt6
+
+      - name: Cache OBS Studio
+        id: cache-obs
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/obs-studio
+          key: obs-studio-32-macos
+
+      - name: Build Plugin
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET="13.0"
+          cmake --build build --config RelWithDebInfo
+
+      - name: Package Plugin
+        run: |
+          chmod +x ./scripts/package-macos.sh
+          ./scripts/package-macos.sh build dist
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: obs-scene-tree-view-macos-universal
+          path: |
+            dist/obs-scene-tree-view-macos.zip
+            dist/obs-scene-tree-view-macos.zip.sha256
+

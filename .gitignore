@@ -17,6 +17,18 @@ install_manifest.txt
 # Tooling and editor artifacts
 /.augment/
 *.code-workspace
+/.serena/
+plan.md
+project_rules.md
+
+# Local draft content (not for version control)
+OBS_Forum_Writeup.txt
 
 # Windows artifacts
 nul
+
+
+# Packaging outputs (release zips and staged folder layouts)
+/obs-scene-tree-view-*.zip
+/obs-studio/
+/scene-tree-view-*.zip

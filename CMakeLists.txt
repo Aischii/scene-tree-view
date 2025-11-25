@@ -12,7 +12,29 @@ set(LIB_CONFIG_NAME "${LIBRARY_NAME}Config")
 set(LIB_VERSION_NAME "${LIB_CONFIG_NAME}Version")
 
 cmake_minimum_required(VERSION 3.25)
-project("${PROJECT_NAME}" VERSION 0.1.5)
+project("${PROJECT_NAME}" VERSION 0.2.0)
+
+# Platform detection
+if(WIN32)
+	set(OS_WINDOWS TRUE)
+elseif(APPLE)
+	set(OS_MACOS TRUE)
+elseif(UNIX)
+	set(OS_LINUX TRUE)
+endif()
+
+# Cross-platform configuration
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+# macOS universal binary support
+if(OS_MACOS)
+	if(NOT CMAKE_OSX_ARCHITECTURES)
+		set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "macOS architectures" FORCE)
+	endif()
+	if(NOT CMAKE_OSX_DEPLOYMENT_TARGET)
+		set(CMAKE_OSX_DEPLOYMENT_TARGET "13.0" CACHE STRING "macOS deployment target" FORCE)
+	endif()
+endif()
 
 if(NOT DEFINED BUILD_IN_OBS)
 		set(BUILD_IN_OBS OFF)

@@ -19,25 +19,77 @@ jobs:
       - name: Setup MSVC
         uses: microsoft/setup-msbuild@v2
 
-      - name: Install OBS Studio
+      - name: Download OBS Dependencies
         shell: pwsh
         run: |
-          # Install OBS Studio via winget (provides development files)
-          Write-Host "Installing OBS Studio..."
-          winget install --id OBSProject.OBSStudio --version 32.0.0 --silent --accept-source-agreements --accept-package-agreements
+          # Download pre-built OBS dependencies (obs-deps)
+          $OBS_DEPS_VERSION = "2025-07-11"
+          $OBS_DEPS_URL = "https://github.com/obsproject/obs-deps/releases/download/${OBS_DEPS_VERSION}/windows-deps-${OBS_DEPS_VERSION}-x64.zip"
+          $OBS_DEPS_FILE = "${{ github.workspace }}/obs-deps.zip"
 
-          # Install Qt6 via aqtinstall
-          Write-Host "Installing Qt6..."
-          pip install aqtinstall
-          aqt install-qt windows desktop 6.8.3 win64_msvc2022_64 -O "${{ github.workspace }}/Qt"
+          Write-Host "Downloading OBS dependencies..."
+          Invoke-WebRequest -Uri $OBS_DEPS_URL -OutFile $OBS_DEPS_FILE
+
+          Write-Host "Extracting OBS dependencies..."
+          Expand-Archive -Path $OBS_DEPS_FILE -DestinationPath "${{ github.workspace }}/obs-deps" -Force
+
+          # Download pre-built Qt6
+          $QT6_URL = "https://github.com/obsproject/obs-deps/releases/download/${OBS_DEPS_VERSION}/windows-deps-qt6-${OBS_DEPS_VERSION}-x64.zip"
+          $QT6_FILE = "${{ github.workspace }}/qt6-deps.zip"
+
+          Write-Host "Downloading Qt6 dependencies..."
+          Invoke-WebRequest -Uri $QT6_URL -OutFile $QT6_FILE
+
+          Write-Host "Extracting Qt6 dependencies..."
+          Expand-Archive -Path $QT6_FILE -DestinationPath "${{ github.workspace }}/qt6-deps" -Force
+
+          # Download OBS Studio source
+          $OBS_VERSION = "32.0.2"
+          $OBS_URL = "https://github.com/obsproject/obs-studio/archive/refs/tags/${OBS_VERSION}.zip"
+          $OBS_FILE = "${{ github.workspace }}/obs-studio.zip"
+
+          Write-Host "Downloading OBS Studio source..."
+          Invoke-WebRequest -Uri $OBS_URL -OutFile $OBS_FILE
+
+          Write-Host "Extracting OBS Studio source..."
+          Expand-Archive -Path $OBS_FILE -DestinationPath "${{ github.workspace }}" -Force
+
+      - name: Build OBS libobs
+        shell: pwsh
+        run: |
+          # Build libobs and obs-frontend-api from source
+          Write-Host "Configuring OBS Studio..."
+          cmake -S "${{ github.workspace }}/obs-studio-32.0.2" `
+            -B "${{ github.workspace }}/obs-studio-32.0.2/build" `
+            -G "Visual Studio 17 2022" -A x64 `
+            -DENABLE_PLUGINS=OFF `
+            -DENABLE_UI=OFF `
+            -DENABLE_SCRIPTING=OFF `
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/obs-deps;${{ github.workspace }}/qt6-deps"
+
+          Write-Host "Building OBS libobs (Debug)..."
+          cmake --build "${{ github.workspace }}/obs-studio-32.0.2/build" `
+            --config Debug --target obs-frontend-api
+
+          Write-Host "Building OBS libobs (RelWithDebInfo)..."
+          cmake --build "${{ github.workspace }}/obs-studio-32.0.2/build" `
+            --config RelWithDebInfo --target obs-frontend-api
+
+          Write-Host "Installing OBS development files..."
+          cmake --install "${{ github.workspace }}/obs-studio-32.0.2/build" `
+            --config Debug --prefix "${{ github.workspace }}/obs-build" --component Development
+          cmake --install "${{ github.workspace }}/obs-studio-32.0.2/build" `
+            --config RelWithDebInfo --prefix "${{ github.workspace }}/obs-build" --component Development
 
       - name: Build Plugin
         shell: pwsh
         run: |
-          # Configure and build
-          $env:Qt6_DIR = "${{ github.workspace }}/Qt/6.8.3/msvc2022_64"
+          # Configure and build plugin
+          Write-Host "Configuring plugin..."
           cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
-            -DCMAKE_PREFIX_PATH="C:/Program Files/obs-studio;$env:Qt6_DIR"
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/obs-build;${{ github.workspace }}/qt6-deps"
+
+          Write-Host "Building plugin..."
           cmake --build build --config RelWithDebInfo
 
       - name: Package Plugin
@@ -76,6 +128,7 @@ jobs:
             cmake \
             ninja-build \
             pkg-config \
+            libsimde-dev \
             obs-studio \
             qt6-base-dev \
             qt6-base-private-dev \
@@ -108,21 +161,84 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install Dependencies
+      - name: Download OBS Dependencies
         run: |
-          # Install OBS Studio and dependencies via Homebrew
-          brew install --cask obs
-          brew install cmake ninja qt6
+          # Download pre-built OBS dependencies (obs-deps)
+          OBS_DEPS_VERSION="2025-07-11"
+          OBS_DEPS_URL="https://github.com/obsproject/obs-deps/releases/download/${OBS_DEPS_VERSION}/macos-deps-${OBS_DEPS_VERSION}-universal.tar.xz"
+          OBS_DEPS_FILE="${{ github.workspace }}/obs-deps.tar.xz"
+
+          echo "Downloading OBS dependencies..."
+          curl -L -o "$OBS_DEPS_FILE" "$OBS_DEPS_URL"
+
+          echo "Extracting OBS dependencies..."
+          mkdir -p "${{ github.workspace }}/obs-deps"
+          tar -xJf "$OBS_DEPS_FILE" -C "${{ github.workspace }}/obs-deps"
+
+          # Download pre-built Qt6
+          QT6_URL="https://github.com/obsproject/obs-deps/releases/download/${OBS_DEPS_VERSION}/macos-deps-qt6-${OBS_DEPS_VERSION}-universal.tar.xz"
+          QT6_FILE="${{ github.workspace }}/qt6-deps.tar.xz"
+
+          echo "Downloading Qt6 dependencies..."
+          curl -L -o "$QT6_FILE" "$QT6_URL"
+
+          echo "Extracting Qt6 dependencies..."
+          mkdir -p "${{ github.workspace }}/qt6-deps"
+          tar -xJf "$QT6_FILE" -C "${{ github.workspace }}/qt6-deps"
+
+          # Download OBS Studio source
+          OBS_VERSION="32.0.2"
+          OBS_URL="https://github.com/obsproject/obs-studio/archive/refs/tags/${OBS_VERSION}.tar.gz"
+          OBS_FILE="${{ github.workspace }}/obs-studio.tar.gz"
+
+          echo "Downloading OBS Studio source..."
+          curl -L -o "$OBS_FILE" "$OBS_URL"
+
+          echo "Extracting OBS Studio source..."
+          tar -xzf "$OBS_FILE" -C "${{ github.workspace }}"
+
+          # Remove quarantine attribute
+          xattr -r -d com.apple.quarantine "${{ github.workspace }}/obs-deps" || true
+          xattr -r -d com.apple.quarantine "${{ github.workspace }}/qt6-deps" || true
+
+      - name: Build OBS libobs
+        run: |
+          # Build libobs and obs-frontend-api from source
+          echo "Configuring OBS Studio..."
+          cmake -S "${{ github.workspace }}/obs-studio-32.0.2" \
+            -B "${{ github.workspace }}/obs-studio-32.0.2/build" \
+            -G Xcode \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET="13.0" \
+            -DENABLE_PLUGINS=OFF \
+            -DENABLE_UI=OFF \
+            -DENABLE_SCRIPTING=OFF \
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/obs-deps;${{ github.workspace }}/qt6-deps"
+
+          echo "Building OBS libobs (Debug)..."
+          cmake --build "${{ github.workspace }}/obs-studio-32.0.2/build" \
+            --config Debug --target obs-frontend-api
+
+          echo "Building OBS libobs (RelWithDebInfo)..."
+          cmake --build "${{ github.workspace }}/obs-studio-32.0.2/build" \
+            --config RelWithDebInfo --target obs-frontend-api
+
+          echo "Installing OBS development files..."
+          cmake --install "${{ github.workspace }}/obs-studio-32.0.2/build" \
+            --config Debug --prefix "${{ github.workspace }}/obs-build" --component Development
+          cmake --install "${{ github.workspace }}/obs-studio-32.0.2/build" \
+            --config RelWithDebInfo --prefix "${{ github.workspace }}/obs-build" --component Development
 
       - name: Build Plugin
         run: |
-          # Set Qt6 path for CMake
-          export Qt6_DIR="$(brew --prefix qt6)/lib/cmake/Qt6"
-
+          # Configure and build plugin
+          echo "Configuring plugin..."
           cmake -S . -B build -G Ninja \
             -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" \
             -DCMAKE_OSX_DEPLOYMENT_TARGET="13.0" \
-            -DQt6_DIR="${Qt6_DIR}"
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/obs-build;${{ github.workspace }}/qt6-deps"
+
+          echo "Building plugin..."
           cmake --build build --config RelWithDebInfo
 
       - name: Package Plugin

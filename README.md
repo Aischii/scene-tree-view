@@ -4,6 +4,19 @@ A powerful OBS Studio plugin that adds a hierarchical scene tree view dock, enab
 
 ![Screenshot](images/obs_scene_tree_view_example.png)
 
+## Supported Platforms
+
+| Platform | Architecture | OBS Version | Status |
+|----------|-------------|-------------|--------|
+| **Windows** | x64 | 32.x+ | ✅ Fully Supported |
+| **Linux** | x86_64 | 32.x+ | ✅ Fully Supported |
+| **macOS** | x64 + arm64 (Universal) | 32.x+ | ✅ Fully Supported |
+
+**Notes:**
+- **Windows**: Pre-built binaries available in releases
+- **Linux**: Requires strict OBS 32.x version matching (libobs 32)
+- **macOS**: Universal binary supports both Intel and Apple Silicon Macs; unsigned (requires Gatekeeper bypass)
+
 ## Features
 
 - **Hierarchical Scene Organization**: Organize scenes into folders for better project structure
@@ -72,6 +85,62 @@ After building, install the plugin into the system OBS installation:
 4) Launch OBS Studio and enable the dock:
    - View → Docks → Scene Tree View (check it)
 5) If you don’t see it immediately, use View → Docks → Reset UI once, then re-check the dock.
+
+## Installation from Release ZIP (Linux)
+
+1) Download the latest `obs-scene-tree-view-linux-x86_64.zip` from GitHub Releases
+2) Close OBS Studio completely
+3) Extract the archive
+4) As root, copy the contents to system directories:
+   ```bash
+   sudo cp -r usr/lib/obs-plugins/* /usr/lib/obs-plugins/
+   sudo cp -r usr/share/obs/* /usr/share/obs/
+   ```
+5) Start OBS Studio
+6) Enable the dock: View → Docks → Scene Tree View (Reset UI if needed)
+
+**Important Notes:**
+- This is a system-level install and requires root privileges
+- OBS 32.x is required (strict version matching)
+- Plugin must be built against the same libobs version as your OBS installation
+
+## Installation from Release ZIP (macOS)
+
+1) Download the latest `obs-scene-tree-view-macos.zip` from GitHub Releases
+2) Close OBS Studio completely
+3) Extract the archive
+4) Copy the "Library" folder to the root of your disk (/) and allow merge
+   - Or manually copy to:
+     - `/Library/Application Support/obs-studio/plugins/obs_scene_tree_view.plugin/Contents/MacOS/obs_scene_tree_view`
+     - `/Library/Application Support/obs-studio/plugins/obs_scene_tree_view/locale/*.ini`
+5) **IMPORTANT: Bypass macOS Gatekeeper** (plugin is unsigned)
+
+   **Method 1 (Recommended - Right-Click):**
+   - Right-click the plugin file in Finder
+   - Select "Open"
+   - Click "Open" in the security dialog
+   - The plugin will now work permanently
+
+   **Method 2 (Terminal - xattr):**
+   ```bash
+   xattr -cr "/Library/Application Support/obs-studio/plugins/obs_scene_tree_view.plugin"
+   ```
+
+   **Method 3 (System Settings):**
+   - Try to launch OBS with the plugin
+   - Open System Settings → Privacy & Security
+   - Scroll to "Security" section
+   - Click "Open Anyway" next to the blocked plugin warning
+   - Restart OBS Studio
+
+6) Start OBS Studio
+7) Enable the dock: View → Docks → Scene Tree View (Reset UI if needed)
+
+**Important Notes:**
+- This is a system-level install and may require administrator privileges
+- OBS 32.x is required
+- Universal binary (x86_64 + arm64) for Intel and Apple Silicon Macs
+- Plugin is NOT code-signed; Gatekeeper bypass is required on first launch
 
 ## Building from Source
 

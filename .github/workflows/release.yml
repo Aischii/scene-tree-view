@@ -46,25 +46,64 @@ jobs:
         if: matrix.os == 'ubuntu-24.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake ninja-build pkg-config qt6-base-dev libqt6widgets6
+
+          # Add OBS Studio PPA for OBS 32.x
+          sudo add-apt-repository -y ppa:obsproject/obs-studio
+          sudo apt-get update
+
+          # Install OBS Studio and development files
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            ninja-build \
+            pkg-config \
+            obs-studio \
+            qt6-base-dev \
+            qt6-base-private-dev \
+            libqt6svg6-dev
 
       - name: Install Dependencies (macOS)
         if: matrix.os == 'macos-14'
         run: |
+          # Install OBS Studio and dependencies via Homebrew
+          brew install --cask obs
           brew install cmake ninja qt6
+
+      - name: Download OBS Studio (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          # Download OBS Studio 32.0.0 with dependencies
+          $obsVersion = "32.0.0"
+          $obsUrl = "https://github.com/obsproject/obs-studio/releases/download/${obsVersion}/OBS-Studio-${obsVersion}-Windows.zip"
+          $depsUrl = "https://github.com/obsproject/obs-deps/releases/download/2024-11-15/windows-deps-qt6-2024-11-15-x64.zip"
+
+          Write-Host "Downloading OBS Studio ${obsVersion}..."
+          Invoke-WebRequest -Uri $obsUrl -OutFile "obs-studio.zip"
+          Expand-Archive -Path "obs-studio.zip" -DestinationPath "${{ github.workspace }}/obs-studio"
+
+          Write-Host "Downloading OBS dependencies..."
+          Invoke-WebRequest -Uri $depsUrl -OutFile "obs-deps.zip"
+          Expand-Archive -Path "obs-deps.zip" -DestinationPath "${{ github.workspace }}/obs-deps"
 
       - name: Build Plugin (Windows)
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/obs-studio;${{ github.workspace }}/obs-deps" `
+            -DQt6_DIR="${{ github.workspace }}/obs-deps/lib/cmake/Qt6"
           cmake --build build --config Release
 
       - name: Build Plugin (Linux/macOS)
         if: matrix.os != 'windows-latest'
         run: |
           if [ "${{ matrix.os }}" = "macos-14" ]; then
-            cmake -S . -B build -G Ninja -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET="13.0"
+            export Qt6_DIR="$(brew --prefix qt6)/lib/cmake/Qt6"
+            cmake -S . -B build -G Ninja \
+              -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" \
+              -DCMAKE_OSX_DEPLOYMENT_TARGET="13.0" \
+              -DQt6_DIR="${Qt6_DIR}"
           else
             cmake -S . -B build -G Ninja
           fi

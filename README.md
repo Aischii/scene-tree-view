@@ -76,7 +76,7 @@ For end users, the easiest way to install is with a pre-built release ZIP that c
 After building, install the plugin into the system OBS installation:
 
 1) Close OBS Studio
-2) Copy the built DLL (v0.1.5) to the 64-bit plugins folder:
+2) Copy the built DLL (v0.1.9) to the 64-bit plugins folder:
    - From: `d:\Coding\obs-plugins\obs_scene_tree_view\build_qt683\RelWithDebInfo\obs_scene_tree_view.dll`
    - To:   `C:\Program Files\obs-studio\obs-plugins\64bit\obs_scene_tree_view.dll`
 3) Copy locale files (for translated titles/strings):

@@ -26,7 +26,7 @@ jobs:
             script: chmod +x ./scripts/package-linux.sh && ./scripts/package-linux.sh build dist
             artifact: dist/obs-scene-tree-view-linux-x86_64.zip
             checksum: dist/obs-scene-tree-view-linux-x86_64.zip.sha256
-          - os: macos-14
+          - os: macos-15
             platform: macos-universal
             script: chmod +x ./scripts/package-macos.sh && ./scripts/package-macos.sh build dist
             artifact: dist/obs-scene-tree-view-macos.zip
@@ -64,7 +64,7 @@ jobs:
             libqt6svg6-dev
 
       - name: Download OBS Dependencies (macOS)
-        if: matrix.os == 'macos-14'
+        if: matrix.os == 'macos-15'
         run: |
           # Download pre-built OBS dependencies
           OBS_DEPS_VERSION="2025-07-11"
@@ -99,7 +99,7 @@ jobs:
           xattr -r -d com.apple.quarantine "${{ github.workspace }}/qt6-deps" || true
 
       - name: Build OBS libobs (macOS)
-        if: matrix.os == 'macos-14'
+        if: matrix.os == 'macos-15'
         run: |
           echo "Configuring OBS Studio..."
           cmake -S "${{ github.workspace }}/obs-studio-32.0.2" \
@@ -173,7 +173,7 @@ jobs:
         run: |
           Write-Host "Configuring plugin..."
           cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
-            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/obs-build;${{ github.workspace }}/qt6-deps"
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/obs-deps;${{ github.workspace }}/obs-build;${{ github.workspace }}/qt6-deps"
 
           Write-Host "Building plugin..."
           cmake --build build --config Release
@@ -181,12 +181,12 @@ jobs:
       - name: Build Plugin (Linux/macOS)
         if: matrix.os != 'windows-latest'
         run: |
-          if [ "${{ matrix.os }}" = "macos-14" ]; then
+          if [ "${{ matrix.os }}" = "macos-15" ]; then
             echo "Configuring plugin for macOS..."
             cmake -S . -B build -G Ninja \
               -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" \
               -DCMAKE_OSX_DEPLOYMENT_TARGET="13.0" \
-              -DCMAKE_PREFIX_PATH="${{ github.workspace }}/obs-build;${{ github.workspace }}/qt6-deps"
+              -DCMAKE_PREFIX_PATH="${{ github.workspace }}/obs-deps;${{ github.workspace }}/obs-build;${{ github.workspace }}/qt6-deps"
           else
             echo "Configuring plugin for Linux..."
             cmake -S . -B build -G Ninja

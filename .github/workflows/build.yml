@@ -87,7 +87,7 @@ jobs:
           # Configure and build plugin
           Write-Host "Configuring plugin..."
           cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
-            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/obs-build;${{ github.workspace }}/qt6-deps"
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/obs-deps;${{ github.workspace }}/obs-build;${{ github.workspace }}/qt6-deps"
 
           Write-Host "Building plugin..."
           cmake --build build --config RelWithDebInfo
@@ -154,7 +154,7 @@ jobs:
 
   macos:
     name: macOS Universal
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - name: Checkout
         uses: actions/checkout@v4

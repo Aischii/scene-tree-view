@@ -19,16 +19,19 @@ jobs:
           - os: windows-latest
             platform: windows-x64
             script: ./scripts/package-windows.ps1 -BuildDir build -OutDir dist
+            shell: pwsh
             artifact: dist/obs-scene-tree-view-windows-x64.zip
             checksum: dist/obs-scene-tree-view-windows-x64.zip.sha256
           - os: ubuntu-24.04
             platform: linux-x86_64
             script: chmod +x ./scripts/package-linux.sh && ./scripts/package-linux.sh build dist
+            shell: bash
             artifact: dist/obs-scene-tree-view-linux-x86_64.zip
             checksum: dist/obs-scene-tree-view-linux-x86_64.zip.sha256
           - os: macos-15
             platform: macos-universal
             script: chmod +x ./scripts/package-macos.sh && ./scripts/package-macos.sh build dist
+            shell: bash
             artifact: dist/obs-scene-tree-view-macos.zip
             checksum: dist/obs-scene-tree-view-macos.zip.sha256
 
@@ -212,7 +215,7 @@ jobs:
           cmake --build build --config Release
 
       - name: Package Plugin
-        shell: bash
+        shell: ${{ matrix.shell }}
         run: ${{ matrix.script }}
 
       - name: Upload Artifacts

@@ -207,7 +207,7 @@ jobs:
           echo "Configuring OBS Studio..."
           cmake -S "${{ github.workspace }}/obs-studio-32.0.2" \
             -B "${{ github.workspace }}/obs-studio-32.0.2/build" \
-            -G Ninja \
+            -G Xcode \
             -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
             -DCMAKE_OSX_DEPLOYMENT_TARGET="13.0" \
             -DENABLE_PLUGINS=OFF \

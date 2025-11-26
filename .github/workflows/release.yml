@@ -1,0 +1,249 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+      - '[0-9]+.*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build and Release
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows-x64
+            script: ./scripts/package-windows.ps1 -BuildDir build -OutDir dist
+            artifact: dist/obs-scene-tree-view-windows-x64.zip
+            checksum: dist/obs-scene-tree-view-windows-x64.zip.sha256
+          - os: ubuntu-24.04
+            platform: linux-x86_64
+            script: chmod +x ./scripts/package-linux.sh && ./scripts/package-linux.sh build dist
+            artifact: dist/obs-scene-tree-view-linux-x86_64.zip
+            checksum: dist/obs-scene-tree-view-linux-x86_64.zip.sha256
+          - os: macos-15
+            platform: macos-universal
+            script: chmod +x ./scripts/package-macos.sh && ./scripts/package-macos.sh build dist
+            artifact: dist/obs-scene-tree-view-macos.zip
+            checksum: dist/obs-scene-tree-view-macos.zip.sha256
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Build Environment (Windows)
+        if: matrix.os == 'windows-latest'
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Install Dependencies (Linux)
+        if: matrix.os == 'ubuntu-24.04'
+        run: |
+          sudo apt-get update
+
+          # Add OBS Studio PPA for OBS 32.x
+          sudo add-apt-repository -y ppa:obsproject/obs-studio
+          sudo apt-get update
+
+          # Install OBS Studio and development files
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            ninja-build \
+            pkg-config \
+            libsimde-dev \
+            obs-studio \
+            qt6-base-dev \
+            qt6-base-private-dev \
+            libqt6svg6-dev
+
+      - name: Download OBS Dependencies (macOS)
+        if: matrix.os == 'macos-15'
+        run: |
+          # Download pre-built OBS dependencies
+          OBS_DEPS_VERSION="2025-07-11"
+          OBS_DEPS_URL="https://github.com/obsproject/obs-deps/releases/download/${OBS_DEPS_VERSION}/macos-deps-${OBS_DEPS_VERSION}-universal.tar.xz"
+          OBS_DEPS_FILE="${{ github.workspace }}/obs-deps.tar.xz"
+
+          echo "Downloading OBS dependencies..."
+          curl -L -o "$OBS_DEPS_FILE" "$OBS_DEPS_URL"
+          mkdir -p "${{ github.workspace }}/obs-deps"
+          tar -xJf "$OBS_DEPS_FILE" -C "${{ github.workspace }}/obs-deps"
+
+          # Download pre-built Qt6
+          QT6_URL="https://github.com/obsproject/obs-deps/releases/download/${OBS_DEPS_VERSION}/macos-deps-qt6-${OBS_DEPS_VERSION}-universal.tar.xz"
+          QT6_FILE="${{ github.workspace }}/qt6-deps.tar.xz"
+
+          echo "Downloading Qt6 dependencies..."
+          curl -L -o "$QT6_FILE" "$QT6_URL"
+          mkdir -p "${{ github.workspace }}/qt6-deps"
+          tar -xJf "$QT6_FILE" -C "${{ github.workspace }}/qt6-deps"
+
+          # Download OBS Studio source
+          OBS_VERSION="32.0.2"
+          OBS_URL="https://github.com/obsproject/obs-studio/archive/refs/tags/${OBS_VERSION}.tar.gz"
+          OBS_FILE="${{ github.workspace }}/obs-studio.tar.gz"
+
+          echo "Downloading OBS Studio source..."
+          curl -L -o "$OBS_FILE" "$OBS_URL"
+          tar -xzf "$OBS_FILE" -C "${{ github.workspace }}"
+
+          # Remove quarantine attribute
+          xattr -r -d com.apple.quarantine "${{ github.workspace }}/obs-deps" || true
+          xattr -r -d com.apple.quarantine "${{ github.workspace }}/qt6-deps" || true
+
+      - name: Build OBS libobs (macOS)
+        if: matrix.os == 'macos-15'
+        run: |
+          # Optionally disable Metal renderer for CI by patching OBS CMakeLists
+          python - << 'PY'
+          import pathlib
+
+          root = pathlib.Path("${{ github.workspace }}") / "obs-studio-32.0.2"
+          cmakelists = root / "CMakeLists.txt"
+          text = cmakelists.read_text()
+          old = "if(OS_MACOS)\n  add_subdirectory(libobs-metal)\nendif()"
+          new = "if(OS_MACOS AND NOT OBS_DISABLE_METAL)\n  add_subdirectory(libobs-metal)\nendif()"
+          if old in text:
+              cmakelists.write_text(text.replace(old, new))
+          PY
+
+          echo "Configuring OBS Studio..."
+          cmake -S "${{ github.workspace }}/obs-studio-32.0.2" \
+            -B "${{ github.workspace }}/obs-studio-32.0.2/build" \
+            -G Xcode \
+            -DOBS_DISABLE_METAL=ON \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET="13.0" \
+            -DENABLE_PLUGINS=OFF -DENABLE_UI=OFF -DENABLE_SCRIPTING=OFF \
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/obs-deps;${{ github.workspace }}/qt6-deps"
+
+          echo "Building OBS libobs..."
+          cmake --build "${{ github.workspace }}/obs-studio-32.0.2/build" \
+            --config Release --target obs-frontend-api
+
+          echo "Installing OBS development files..."
+          cmake --install "${{ github.workspace }}/obs-studio-32.0.2/build" \
+            --config Release --prefix "${{ github.workspace }}/obs-build" --component Development
+
+      - name: Download OBS Dependencies (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          # Download pre-built OBS dependencies
+          $OBS_DEPS_VERSION = "2025-07-11"
+          $OBS_DEPS_URL = "https://github.com/obsproject/obs-deps/releases/download/${OBS_DEPS_VERSION}/windows-deps-${OBS_DEPS_VERSION}-x64.zip"
+          $OBS_DEPS_FILE = "${{ github.workspace }}/obs-deps.zip"
+
+          Write-Host "Downloading OBS dependencies..."
+          Invoke-WebRequest -Uri $OBS_DEPS_URL -OutFile $OBS_DEPS_FILE
+          Expand-Archive -Path $OBS_DEPS_FILE -DestinationPath "${{ github.workspace }}/obs-deps" -Force
+
+          # Download pre-built Qt6
+          $QT6_URL = "https://github.com/obsproject/obs-deps/releases/download/${OBS_DEPS_VERSION}/windows-deps-qt6-${OBS_DEPS_VERSION}-x64.zip"
+          $QT6_FILE = "${{ github.workspace }}/qt6-deps.zip"
+
+          Write-Host "Downloading Qt6 dependencies..."
+          Invoke-WebRequest -Uri $QT6_URL -OutFile $QT6_FILE
+          Expand-Archive -Path $QT6_FILE -DestinationPath "${{ github.workspace }}/qt6-deps" -Force
+
+          # Download OBS Studio source
+          $OBS_VERSION = "32.0.2"
+          $OBS_URL = "https://github.com/obsproject/obs-studio/archive/refs/tags/${OBS_VERSION}.zip"
+          $OBS_FILE = "${{ github.workspace }}/obs-studio.zip"
+
+          Write-Host "Downloading OBS Studio source..."
+          Invoke-WebRequest -Uri $OBS_URL -OutFile $OBS_FILE
+          Expand-Archive -Path $OBS_FILE -DestinationPath "${{ github.workspace }}" -Force
+
+      - name: Build OBS libobs (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          Write-Host "Configuring OBS Studio..."
+          cmake -S "${{ github.workspace }}/obs-studio-32.0.2" `
+            -B "${{ github.workspace }}/obs-studio-32.0.2/build" `
+            -G "Visual Studio 17 2022" -A x64 `
+            -DENABLE_PLUGINS=OFF -DENABLE_UI=OFF -DENABLE_SCRIPTING=OFF `
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/obs-deps;${{ github.workspace }}/qt6-deps"
+
+          Write-Host "Building OBS libobs..."
+          cmake --build "${{ github.workspace }}/obs-studio-32.0.2/build" `
+            --config Release --target obs-frontend-api
+
+          Write-Host "Installing OBS development files..."
+          cmake --install "${{ github.workspace }}/obs-studio-32.0.2/build" `
+            --config Release --prefix "${{ github.workspace }}/obs-build" --component Development
+
+      - name: Build Plugin (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          Write-Host "Configuring plugin..."
+          cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/obs-deps;${{ github.workspace }}/obs-build;${{ github.workspace }}/qt6-deps"
+
+          Write-Host "Building plugin..."
+          cmake --build build --config Release
+
+      - name: Build Plugin (Linux/macOS)
+        if: matrix.os != 'windows-latest'
+        run: |
+          if [ "${{ matrix.os }}" = "macos-15" ]; then
+            echo "Configuring plugin for macOS..."
+            # libobs is installed as a Framework on macOS; add framework cmake path
+            # Also include obs-deps for SIMDe (required by libobsConfig.cmake)
+            cmake -S . -B build -G Ninja \
+              -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" \
+              -DCMAKE_OSX_DEPLOYMENT_TARGET="13.0" \
+              -DCMAKE_PREFIX_PATH="${{ github.workspace }}/obs-build/Frameworks/libobs.framework/Resources/cmake;${{ github.workspace }}/obs-build;${{ github.workspace }}/obs-deps;${{ github.workspace }}/qt6-deps"
+          else
+            echo "Configuring plugin for Linux..."
+            cmake -S . -B build -G Ninja
+          fi
+
+          echo "Building plugin..."
+          cmake --build build --config Release
+
+      - name: Package Plugin
+        shell: bash
+        run: ${{ matrix.script }}
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}
+          path: |
+            ${{ matrix.artifact }}
+            ${{ matrix.checksum }}
+
+  create-release:
+    name: Create GitHub Release
+    needs: build-and-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: true
+          generate_release_notes: true
+          files: |
+            artifacts/**/*.zip
+            artifacts/**/*.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

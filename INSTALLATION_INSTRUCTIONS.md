@@ -1,205 +1,218 @@
-# Scene Tree View Plugin - Fixed Version Installation
+# Installation Instructions - Scene Tree View Plugin
 
-## What Was Fixed
+This document provides detailed installation instructions for the Scene Tree View plugin across all supported platforms.
 
-The Scene Tree View dock was appearing **empty** (only title bar visible, no content) after OBS restart when:
-- Docked to the **left of the video preview/viewer area**, OR
-- **Tabbed/combined with another dock**
+## Table of Contents
 
-**Root Cause:** Double QDockWidget wrapping caused by the .ui file defining a QDockWidget inside the C++ QDockWidget class, leading to widget detachment that broke state restoration.
-
-**Fix Applied:** 
-1. Changed `.ui` file root widget from `QDockWidget` to `QWidget`
-2. Updated registration to use `obs_frontend_add_custom_qdock` instead of widget detachment pattern
-3. Eliminated Qt warnings about invalid dock area and layout issues
-
-**Result:** Dock content now displays correctly in **ALL** positions after OBS restart.
+- [Windows Installation](#windows-installation)
+- [Linux Installation](#linux-installation)
+- [macOS Installation](#macos-installation)
+- [Troubleshooting](#troubleshooting)
 
 ---
 
-## Quick Installation (Automated)
+## Windows Installation
 
-### Option 1: PowerShell Script (Recommended)
+### Prerequisites
+- Windows 10/11 (64-bit)
+- OBS Studio 32.x+ installed
 
-Run this command in PowerShell **as Administrator**:
+### Installation Steps
 
-```powershell
-cd D:\Coding\obs-plugins\obs_scene_tree_view
-.\scripts\install-fixed-plugin.ps1
-```
+1. **Download the Plugin**
+   - Download `obs-scene-tree-view-windows-x64.zip` from the [GitHub Releases](https://github.com/TheThirdRail/scene-tree-view/releases) page
 
-The script will:
-- ✅ Check if OBS is running (and offer to close it)
-- ✅ Backup your existing plugin DLL
-- ✅ Copy the fixed DLL to OBS
-- ✅ Provide next steps for testing
+2. **Close OBS Studio**
+   - Ensure OBS Studio is completely closed (check Task Manager if needed)
 
----
+3. **Extract the Archive**
+   - Extract the ZIP file to a temporary location
 
-## Manual Installation
-
-### Step 1: Close OBS Studio
-
-**Important:** OBS must be completely closed before installing the plugin.
-
-```powershell
-# Check if OBS is running
-Get-Process -Name "obs64" -ErrorAction SilentlyContinue
-
-# If running, close it
-Stop-Process -Name "obs64" -Force
-```
-
-### Step 2: Copy the Fixed DLL
-
-**Source:** `D:\Coding\obs-plugins\obs_scene_tree_view\build_qt683\RelWithDebInfo\obs_scene_tree_view.dll`  
-**Target:** `C:\Program Files\obs-studio\obs-plugins\64bit\obs_scene_tree_view.dll`
-
-```powershell
-# Backup existing DLL (optional but recommended)
-Copy-Item "C:\Program Files\obs-studio\obs-plugins\64bit\obs_scene_tree_view.dll" `
-          "C:\Program Files\obs-studio\obs-plugins\64bit\obs_scene_tree_view.dll.backup" `
-          -Force
-
-# Install fixed DLL
-Copy-Item "D:\Coding\obs-plugins\obs_scene_tree_view\build_qt683\RelWithDebInfo\obs_scene_tree_view.dll" `
-          "C:\Program Files\obs-studio\obs-plugins\64bit\obs_scene_tree_view.dll" `
-          -Force
-```
-
-### Step 3: Launch OBS Studio
-
-Start OBS Studio normally.
-
-### Step 4: Enable the Dock
-
-1. Go to **View → Docks → Scene Tree View** (check it)
-2. If the dock doesn't appear, try **View → Docks → Reset UI**, then re-enable it
-
----
-
-## Testing the Fix
-
-### Test 1: Left Dock Position
-
-1. Drag **Scene Tree View** to the **left of the video preview**
-2. Verify the content is visible (tree view + toolbar buttons)
-3. **Close OBS completely**
-4. **Reopen OBS**
-5. ✅ **Expected:** Dock content is still visible and functional
-
-### Test 2: Tabbed Configuration
-
-1. Drag **Scene Tree View** onto another dock (e.g., **Sources**) to create tabs
-2. Verify both docks show as tabs and content is visible
-3. **Close OBS completely**
-4. **Reopen OBS**
-5. ✅ **Expected:** Both docks are visible in tabs, content displays correctly
-
-### Test 3: Other Positions
-
-Test these positions to ensure nothing broke:
-- **Bottom dock area**
-- **Right dock area**
-- **Floating** (undocked window)
-
-All should work correctly.
-
-### Test 4: Verify Logs
-
-1. Open OBS logs: **Help → Log Files → View Current Log**
-2. Search for `SceneTreeView`
-3. ✅ **Expected to see:**
+4. **Copy Plugin Files**
+   - Copy the contents to `C:\Program Files\obs-studio\`
+   - This will place:
+     - `obs_scene_tree_view.dll` → `C:\Program Files\obs-studio\obs-plugins\64bit\`
+     - `obs_scene_tree_view.pdb` → `C:\Program Files\obs-studio\obs-plugins\64bit\`
+     - Locale files → `C:\Program Files\obs-studio\data\obs-plugins\obs_scene_tree_view\locale\`
+   
+   **PowerShell Example (Run as Administrator):**
+   ```powershell
+   $dest = "C:\Program Files\obs-studio\obs-plugins\64bit"
+   Copy-Item ".\obs_scene_tree_view.dll" $dest -Force
+   Copy-Item ".\obs_scene_tree_view.pdb" $dest -Force
    ```
-   [SceneTreeView] loaded version 0.1.9
-   [SceneTreeView] registered via add_dock_by_id
+
+5. **Launch OBS Studio**
+   - Start OBS Studio
+
+6. **Enable the Dock**
+   - Go to **View → Docks → Scene Tree View** (check it)
+   - If it doesn't appear: **View → Docks → Reset UI**, then re-check the dock
+
+### Verification
+- The Scene Tree View dock should appear (typically on the left side)
+- Check OBS logs (Help → Log Files) for confirmation: Look for `[SceneTreeView] registered via add_custom_qdock`
+
+---
+
+## Linux Installation
+
+### Prerequisites
+- Linux distribution (Ubuntu 24.04, Fedora, Arch, etc.)
+- OBS Studio 32.x+ installed
+- Root/sudo access
+
+### Installation Steps
+
+1. **Download the Plugin**
+   - Download `obs-scene-tree-view-linux-x86_64.zip` from the [GitHub Releases](https://github.com/TheThirdRail/scene-tree-view/releases) page
+
+2. **Close OBS Studio**
+   - Ensure OBS Studio is completely closed
+
+3. **Extract the Archive**
+   ```bash
+   unzip obs-scene-tree-view-linux-x86_64.zip
+   cd obs-scene-tree-view-linux-x86_64
    ```
-4. ✅ **Should NOT see:**
-   - `QMainWindow::addDockWidget: invalid 'area' argument`
-   - `QDockWidgetLayout::addItem(): please use QDockWidgetLayout::setWidget()`
+
+4. **Install Plugin Files (System-Level)**
+   ```bash
+   sudo cp -r usr/lib/obs-plugins/* /usr/lib/obs-plugins/
+   sudo cp -r usr/share/obs/* /usr/share/obs/
+   ```
+
+5. **Launch OBS Studio**
+   ```bash
+   obs
+   ```
+
+6. **Enable the Dock**
+   - Go to **View → Docks → Scene Tree View** (check it)
+   - If it doesn't appear: **View → Docks → Reset UI**, then re-check the dock
+
+### Important Notes
+- **Version Matching**: Linux requires strict OBS version matching. The plugin must be built against the same libobs version as your OBS installation
+- **System-Level Install**: This is a system-level install and requires root privileges
+- **OBS 32.x Required**: Ensure you have OBS Studio 32.x or later
+
+### Verification
+- The Scene Tree View dock should appear
+- Check OBS logs for confirmation
+
+---
+
+## macOS Installation
+
+### Prerequisites
+- macOS 13.0+ (Ventura or later)
+- OBS Studio 32.x+ installed
+- Administrator access
+
+### Installation Steps
+
+1. **Download the Plugin**
+   - Download `obs-scene-tree-view-macos.zip` from the [GitHub Releases](https://github.com/TheThirdRail/scene-tree-view/releases) page
+
+2. **Close OBS Studio**
+   - Ensure OBS Studio is completely closed
+
+3. **Extract the Archive**
+   - Double-click the ZIP file to extract it
+
+4. **Install Plugin Files**
+   - Copy the "Library" folder to the root of your disk (/) and allow merge
+   - Or manually copy to:
+     - `/Library/Application Support/obs-studio/plugins/obs_scene_tree_view.plugin/Contents/MacOS/obs_scene_tree_view`
+     - `/Library/Application Support/obs-studio/plugins/obs_scene_tree_view/locale/*.ini`
+
+5. **CRITICAL: Bypass macOS Gatekeeper**
+   
+   ⚠️ **This plugin is NOT code-signed. macOS Gatekeeper will block it on first launch.**
+   
+   You MUST bypass Gatekeeper using ONE of these methods:
+   
+   **Method 1 (Recommended - Right-Click):**
+   1. Open Finder and navigate to `/Library/Application Support/obs-studio/plugins/obs_scene_tree_view.plugin`
+   2. Right-click the plugin file
+   3. Select "Open"
+   4. Click "Open" in the security dialog
+   5. The plugin will now work permanently
+   
+   **Method 2 (Terminal - xattr):**
+   ```bash
+   xattr -cr "/Library/Application Support/obs-studio/plugins/obs_scene_tree_view.plugin"
+   ```
+   Then restart OBS Studio.
+   
+   **Method 3 (System Settings):**
+   1. Try to launch OBS with the plugin
+   2. Open **System Settings → Privacy & Security**
+   3. Scroll to the "Security" section
+   4. Click "Open Anyway" next to the blocked plugin warning
+   5. Restart OBS Studio
+
+6. **Launch OBS Studio**
+   - Start OBS Studio
+
+7. **Enable the Dock**
+   - Go to **View → Docks → Scene Tree View** (check it)
+   - If it doesn't appear: **View → Docks → Reset UI**, then re-check the dock
+
+### Important Notes
+- **Universal Binary**: This plugin supports both Intel (x86_64) and Apple Silicon (arm64) Macs
+- **Unsigned Binary**: The plugin is NOT code-signed. Gatekeeper bypass is required on first launch
+- **System-Level Install**: May require administrator privileges
+- **OBS 32.x Required**: Ensure you have OBS Studio 32.x or later
+
+### Verification
+- The Scene Tree View dock should appear
+- Check OBS logs (Help → Log Files) for confirmation
 
 ---
 
 ## Troubleshooting
 
-### Issue: "Access Denied" when copying DLL
+### Plugin Not Appearing in OBS (All Platforms)
 
-**Solution:** Run PowerShell **as Administrator**
+**Problem**: The Scene Tree View dock doesn't appear in the Docks menu.
 
-```powershell
-# Right-click PowerShell → Run as Administrator
-```
+**Solutions**:
+1. Verify the plugin files are installed in the correct location (see platform-specific sections above)
+2. In OBS, enable the dock: **View → Docks → Scene Tree View** (check it)
+3. If missing: **View → Docks → Reset UI**, then re-check the dock entry
+4. Check OBS logs for clues (Help → Log Files): Look for lines containing `obs_scene_tree_view` and `registered via`
+5. Ensure OBS Studio is 32.x+ (Help → About OBS Studio)
 
-### Issue: Dock still appears empty
+### macOS Gatekeeper Issues
 
-**Possible causes:**
-1. OBS was not fully closed before installing
-2. Wrong DLL was copied
-3. OBS is loading an older version from a different location
+**Problem**: macOS blocks the plugin with "cannot be opened because the developer cannot be verified"
 
-**Solutions:**
-1. Ensure OBS is completely closed (check Task Manager)
-2. Verify the DLL timestamp matches the build time
-3. Check for duplicate plugins in `%APPDATA%\obs-studio\plugins\` and remove them
+**Solution**: Follow the Gatekeeper bypass instructions in the macOS Installation section above (Method 1, 2, or 3)
 
-### Issue: Dock doesn't appear in Docks menu
+### Linux Version Mismatch
 
-**Solution:**
-1. **View → Docks → Reset UI**
-2. Re-enable **View → Docks → Scene Tree View**
+**Problem**: Plugin fails to load on Linux
 
----
+**Solution**: Linux requires strict version matching. Ensure the plugin was built against the same libobs version as your OBS installation. You may need to build from source if the pre-built binary doesn't match your OBS version.
 
-## Build Information
+### Windows Permission Issues
 
-- **Plugin Version:** 0.1.9 (with visibility and sizing fixes)
-- **Build Date:** 2025-11-24
-- **OBS Version:** 32.x
-- **Qt Version:** 6.8.3
-- **Platform:** Windows x64
-- **Compiler:** MSVC (Visual Studio 2022)
-- **Build Config:** RelWithDebInfo
-- **DLL Size:** ~268 KB
+**Problem**: Cannot copy files to `C:\Program Files\obs-studio\`
 
----
-
-## Technical Details
-
-For developers interested in the technical details of the fix, see:
-- **`docs/FIX_EMPTY_DOCK_ISSUE.md`** - Comprehensive technical explanation
-- **Git diff** - Review the exact code changes made
-
-### Files Modified
-
-1. **`forms/scene_tree_view.ui`**
-   - Changed root widget from `QDockWidget` to `QWidget`
-   - Removed nested `stvContents` wrapper
-
-2. **`obs_scene_tree_view/obs_scene_tree_view.cpp`**
-   - Changed registration from `obs_frontend_add_dock_by_id` to `obs_frontend_add_custom_qdock`
-   - Removed widget detachment pattern
-   - Updated retry logic in `FINISHED_LOADING` event
+**Solution**: Run PowerShell or Command Prompt as Administrator, or use File Explorer with administrator privileges
 
 ---
 
 ## Support
 
-If you encounter any issues with the fixed plugin:
-
-1. Check the OBS logs for errors
-2. Review `docs/FIX_EMPTY_DOCK_ISSUE.md` for technical details
-3. Verify you're using OBS Studio 32.x
-4. Ensure no other versions of the plugin are installed
-
----
-
-## Next Steps After Installation
-
-1. ✅ Install the fixed DLL
-2. ✅ Test in all dock positions
-3. ✅ Verify logs show correct registration
-4. ✅ Confirm no Qt warnings appear
-5. ✅ Use the plugin normally!
-
-**Enjoy your fully functional Scene Tree View dock!** 🎉
+For additional help:
+1. Check the main [README.md](README.md) for more information
+2. Search existing [GitHub Issues](https://github.com/TheThirdRail/scene-tree-view/issues)
+3. Create a new issue with:
+   - OBS Studio version
+   - Plugin version
+   - Operating system and version
+   - Detailed description of the problem
+   - OBS log file (Help → Log Files)
 

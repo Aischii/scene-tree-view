@@ -45,5 +45,9 @@ mkdir -p "${OUT_DIR}"
 ZIP_PATH="${OUT_DIR}/obs-scene-tree-view-linux-x86_64.zip"
 (cd "${OUT_DIR}" && zip -r "$(basename "${ZIP_PATH}")" "$(basename "${STAGE}")")
 
+# Generate SHA256 checksum
+sha256sum "${ZIP_PATH}" | awk '{print $1 "  " $2}' > "${ZIP_PATH}.sha256"
+
 echo "Packaged: ${ZIP_PATH}"
+echo "Checksum: ${ZIP_PATH}.sha256"
 

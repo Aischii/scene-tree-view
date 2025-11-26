@@ -36,14 +36,34 @@ Installation Instructions for macOS (System-Level)
 4) Start OBS Studio.
 5) Enable the dock via: View 2 Docks 2 Scene Tree View (Reset UI if needed).
 
+IMPORTANT: macOS Gatekeeper Bypass (Unsigned Binary)
+====================================================
+This plugin is NOT code-signed. macOS Gatekeeper will block it on first launch.
+You MUST bypass Gatekeeper using ONE of these methods:
+
+Method 1 (Recommended - Right-Click):
+  1. Right-click the plugin file in Finder
+  2. Select "Open"
+  3. Click "Open" in the security dialog
+  4. The plugin will now work permanently
+
+Method 2 (Terminal - xattr):
+  1. Open Terminal
+  2. Run: xattr -cr "/Library/Application Support/obs-studio/plugins/obs_scene_tree_view.plugin"
+  3. Restart OBS Studio
+
+Method 3 (System Settings):
+  1. Try to launch OBS with the plugin
+  2. Open System Settings -> Privacy & Security
+  3. Scroll to "Security" section
+  4. Click "Open Anyway" next to the blocked plugin warning
+  5. Restart OBS Studio
+
 Notes:
 - This is a system-level install and may require administrator privileges.
 - OBS 32.x is required.
+- Universal binary (x86_64 + arm64) for Intel and Apple Silicon Macs.
 EOF
-
-# Append alternate plain-text instruction (avoid special arrow chars)
-echo >> "${STAGE}/INSTALL.txt"
-echo "Alternate: Enable the dock via: View -> Docks -> Scene Tree View (Reset UI if needed)." >> "${STAGE}/INSTALL.txt"
 
 
 # Create ZIP
@@ -51,5 +71,9 @@ mkdir -p "${OUT_DIR}"
 ZIP_PATH="${OUT_DIR}/obs-scene-tree-view-macos.zip"
 (cd "${OUT_DIR}" && zip -r "$(basename "${ZIP_PATH}")" "$(basename "${STAGE}")")
 
+# Generate SHA256 checksum
+shasum -a 256 "${ZIP_PATH}" | awk '{print $1 "  " $2}' > "${ZIP_PATH}.sha256"
+
 echo "Packaged: ${ZIP_PATH}"
+echo "Checksum: ${ZIP_PATH}.sha256"
 

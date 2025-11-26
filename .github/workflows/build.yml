@@ -248,10 +248,11 @@ jobs:
           # Configure and build plugin
           echo "Configuring plugin..."
           # libobs is installed as a Framework on macOS; add framework cmake path
+          # Also include obs-deps for SIMDe (required by libobsConfig.cmake)
           cmake -S . -B build -G Ninja \
             -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" \
             -DCMAKE_OSX_DEPLOYMENT_TARGET="13.0" \
-            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/obs-build/Frameworks/libobs.framework/Resources/cmake;${{ github.workspace }}/obs-build;${{ github.workspace }}/qt6-deps"
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/obs-build/Frameworks/libobs.framework/Resources/cmake;${{ github.workspace }}/obs-build;${{ github.workspace }}/obs-deps;${{ github.workspace }}/qt6-deps"
 
           echo "Building plugin..."
           cmake --build build --config RelWithDebInfo

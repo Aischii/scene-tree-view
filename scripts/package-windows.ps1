@@ -24,7 +24,7 @@ Copy-Item $dll.FullName $binDir -Force
 if ($pdb) { Copy-Item $pdb.FullName $binDir -Force }
 
 # Locales
-Copy-Item 'data/locale/*.ini' $locDir -Force
+Copy-Item -Path 'data/locale/*.ini' -Destination $locDir -Force
 
 # INSTALL instructions
 $installTxt = @"

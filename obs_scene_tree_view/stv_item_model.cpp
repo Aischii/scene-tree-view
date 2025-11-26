@@ -15,7 +15,7 @@ StvFolderItem::StvFolderItem(const QString &text)
 	this->setDropEnabled(true);
 
 	QMainWindow *main_window = reinterpret_cast<QMainWindow*>(obs_frontend_get_main_window());
-	QIcon icon = config_get_bool(obs_frontend_get_global_config(), "SceneTreeView", "ShowFolderIcons") ?
+	QIcon icon = config_get_bool(obs_frontend_get_user_config(), "SceneTreeView", "ShowFolderIcons") ?
 	            main_window->property("groupIcon").value<QIcon>() :
 	            QIcon();
 	this->setIcon(icon);
@@ -32,7 +32,7 @@ StvSceneItem::StvSceneItem(const QString &text, obs_weak_source_t *weak)
 	this->setData(QVariant::fromValue(obs_weak_source_ptr({weak})), StvItemModel::OBS_SCENE);
 
 	QMainWindow *main_window = reinterpret_cast<QMainWindow*>(obs_frontend_get_main_window());
-	QIcon icon = config_get_bool(obs_frontend_get_global_config(), "SceneTreeView", "ShowSceneIcons") ?
+	QIcon icon = config_get_bool(obs_frontend_get_user_config(), "SceneTreeView", "ShowSceneIcons") ?
 	            main_window->property("sceneIcon").value<QIcon>() :
 	            QIcon();
 	this->setIcon(icon);
@@ -391,6 +391,49 @@ bool StvItemModel::IsManagedScene(obs_source_t *scene_source) const
 	return	obs_data_get_bool(settings, "custom_size") == false /*&&
 			obs_data_get_bool(settings, "cx") == this->_scene_size.cx &&
 					obs_data_get_bool(settings, "cy") == this->_scene_size.cy*/;
+}
+
+
+bool StvItemModel::MoveIndexByOne(const QModelIndex &index, int delta)
+{
+	if (!index.isValid())
+		return false;
+
+	QStandardItem *item = this->itemFromIndex(index);
+	if (!item)
+		return false;
+
+	QStandardItem *parent_item = this->itemFromIndex(index.parent());
+	if (!parent_item)
+		parent_item = this->invisibleRootItem();
+
+	const int row = index.row();
+	const int rowCount = parent_item->rowCount();
+	int insertPos = row + delta;
+	// For moving down, insert after the next item (to land at row+1 after removal)
+	if (delta > 0)
+		insertPos++;
+	// Allow insert at end (insertPos == rowCount) but not beyond
+	if (insertPos < 0 || insertPos > rowCount)
+		return false;
+
+	if (item->type() == SCENE) {
+		obs_weak_source_t *weak = item->data(OBS_SCENE).value<obs_weak_source_ptr>().ptr;
+		this->MoveSceneItem(weak, insertPos, parent_item);
+	} else if (item->type() == FOLDER) {
+		this->MoveSceneFolder(item, insertPos, parent_item);
+	} else {
+		return false;
+	}
+
+	// Remove the original row. When inserting below (delta>0), original stays at 'row'.
+	// When inserting above (delta<0), original shifts down to 'row+1'.
+	if (delta > 0)
+		parent_item->removeRow(row);
+	else
+		parent_item->removeRow(row + 1);
+
+	return true;
 }
 
 void StvItemModel::MoveSceneItem(obs_weak_source_t *source, int row, QStandardItem *parent_item)

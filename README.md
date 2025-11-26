@@ -3,6 +3,9 @@
 A powerful OBS Studio plugin that adds a hierarchical scene tree view dock, enabling efficient scene and folder management with drag-and-drop support.
 
 ![Screenshot](images/obs_scene_tree_view_example.png)
+> Note: This is a third‑party plugin and is not affiliated with or endorsed by the OBS Project.
+
+
 
 ## Supported Platforms
 
@@ -21,11 +24,24 @@ A powerful OBS Studio plugin that adds a hierarchical scene tree view dock, enab
 
 - **Hierarchical Scene Organization**: Organize scenes into folders for better project structure
 - **Drag-and-Drop Support**: Easily reorder scenes and folders with intuitive drag-and-drop
+
 - **Scene Management**: Add, remove, rename, and manage scenes directly from the tree view
 - **Folder Support**: Create and organize scenes into logical groups
 - **Per-Scene Transitions**: Configure custom transitions for individual scenes
 - **Scene Collection Support**: Automatically saves and restores scene tree structure with scene collections
 - **Cross-Platform**: Works on Windows, macOS, and Linux
+
+## Releases
+
+Official builds for Windows, macOS, and Linux are published on the GitHub Releases page:
+- https://github.com/TheThirdRail/obs_scene_tree_view/releases
+
+Each ZIP is packaged with a system-level folder layout so you can unzip directly into your system directories and everything “falls into place.” An INSTALL.txt is included inside each ZIP with step-by-step instructions.
+
+- Windows: unzip into C:\\Program Files (includes DLL + PDB + locales)
+- macOS: unzip into / (Library/Application Support paths)
+- Linux: unzip into / (usr/lib + usr/share paths)
+
 
 ## Prerequisites (Windows)
 
@@ -40,6 +56,7 @@ A powerful OBS Studio plugin that adds a hierarchical scene tree view dock, enab
   - OBS deps (Qt 6.8.3 pack): `C:\OBS-SDK\obs-studio-src\.deps\obs-deps-qt6-2025-08-23-x64`
 
 Notes:
+- These binaries require OBS Studio 32.0.1+ (built against libobs 32 and Qt 6.8.3). Older OBS releases are not ABI-compatible with this build.
 - Qt version must match the OBS runtime’s Qt exactly. For OBS 32.0.1, use Qt 6.8.3.
 - Mixing Qt versions (e.g., building against 6.9.x while running OBS with 6.8.3) will prevent the plugin from loading.
 
@@ -72,7 +89,7 @@ For end users, the easiest way to install is with a pre-built release ZIP that c
 After building, install the plugin into the system OBS installation:
 
 1) Close OBS Studio
-2) Copy the built DLL (v0.1.5) to the 64-bit plugins folder:
+2) Copy the built DLL (v0.1.9) to the 64-bit plugins folder:
    - From: `d:\Coding\obs-plugins\obs_scene_tree_view\build_qt683\RelWithDebInfo\obs_scene_tree_view.dll`
    - To:   `C:\Program Files\obs-studio\obs-plugins\64bit\obs_scene_tree_view.dll`
 3) Copy locale files (for translated titles/strings):
@@ -249,8 +266,16 @@ sudo cmake --install . --config Release
 
 #### Organizing Scenes
 - **Drag and Drop**: Click and drag scenes to reorder or move them into folders
+
 - **Rename**: Right-click a scene/folder → **Rename**
 - **Delete**: Right-click a scene/folder → **Delete**
+
+#### Reordering with Move Up/Down buttons
+- Select a scene or folder, then click Move Up or Move Down to move it exactly one position.
+- The selection stays on the moved item after the move.
+- When the selected item is at the top, Up is disabled; when it is at the bottom, Down is disabled.
+- Disabled icons retain their normal color (non-dimmed) to keep the UI visually stable; only enablement changes.
+
 
 #### Scene Selection
 - Click a scene in the tree to select it as the current scene
@@ -354,7 +379,7 @@ Contributions are welcome! Please follow these guidelines:
 
 ## License
 
-This project is licensed under the **GNU General Public License v2.0** - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **GNU General Public License v2.0 or later** – see the [LICENSE](LICENSE) file for details.
 
 ## Credits
 
@@ -367,7 +392,7 @@ This project is licensed under the **GNU General Public License v2.0** - see the
 For issues, questions, or suggestions:
 
 1. Check the [Troubleshooting](#troubleshooting) section
-2. Search existing [GitHub Issues](https://github.com/DigitOtter/obs_scene_tree_view/issues)
+2. Search existing [GitHub Issues](https://github.com/TheThirdRail/obs_scene_tree_view/issues)
 3. Create a new issue with:
    - OBS Studio version
    - Plugin version

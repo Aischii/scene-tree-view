@@ -4,7 +4,7 @@
 #include <map>
 
 #include <QAbstractItemDelegate>
-#include <QtWidgets/QDockWidget>
+#include <QtWidgets/QWidget>
 
 #include <util/util.hpp>
 
@@ -13,7 +13,7 @@
 #include "ui_scene_tree_view.h"
 
 class ObsSceneTreeView
-        : public QDockWidget
+        : public QWidget
 {
 		Q_OBJECT
 
@@ -34,15 +34,29 @@ class ObsSceneTreeView
 		void on_stvAddFolder_clicked();
 		void on_stvRemove_released();
 
+
+			void on_stvMoveUp_released();
+			void on_stvMoveDown_released();
+			void UpdateMoveButtonsEnabled();
+
+
+
 		// Copied from OBS, OBSBasic::on_scenes_customContextMenuRequested()
 		void on_stvTree_customContextMenuRequested(const QPoint &pos);
 
 		void on_SceneNameEdited(QWidget *editor);
 
+
+
 	private:
 		QAction *_add_scene_act = nullptr;
 		QAction *_remove_scene_act = nullptr;
 		QAction *_toggle_toolbars_scene_act = nullptr;
+
+			QAction *_move_scene_up_act = nullptr;
+			QAction *_move_scene_down_act = nullptr;
+
+
 
 		std::unique_ptr<QMenu> _per_scene_transition_menu;
 
